@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { API_BASE } from '../api'
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const handleLogin = async e => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

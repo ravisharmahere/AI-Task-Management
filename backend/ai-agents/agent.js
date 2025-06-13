@@ -28,9 +28,7 @@ export const TaskAssigner = async (title, description) => {
 }
 
 export const TaskOptimizer = async (title, description) => {
-  console.log('process.env.OPENAI_API_KEY: ', process.env.OPENAI_API_KEY);
   const openai = getOpenAI();
-  console.log('configuration: ', openai.configuration);
     
   const prompt = `Here is a task and its description. Improve the clarity and detail of the description.\n\nTask Title: ${title || 'Untitled'}\nTask Description: ${description}\n\nImproved Task Description:`;
 

@@ -22,7 +22,6 @@
     "eject": "react-scripts eject",
     "format": "prettier --write \"src/**/*.{js,jsx,json,css}\""
   },
-  "proxy": "http://localhost:5000",
   "browserslist": {
     "production": [
       ">0.2%",
