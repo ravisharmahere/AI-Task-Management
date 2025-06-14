@@ -2,24 +2,28 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 
-function Login({ setIsAuthenticated }) {
+function Login() {
   const [email, setEmail] = useState('user3@gmail.com');
   const [password, setPassword] = useState('user3');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async e => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     try {
       const { data } = await api.post('/api/auth/login', { email, password });
       localStorage.setItem('token', data.token);
       localStorage.setItem('userName', data.user.name);
       localStorage.setItem('userRole', data.user.role);
-      setIsAuthenticated(true);
+
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred during login');
-      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -51,9 +55,19 @@ function Login({ setIsAuthenticated }) {
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+            disabled={isLoading}
+            className={`w-full bg-blue-600 text-white py-2 rounded transition ${
+              isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'
+            }`}
           >
-            Login
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Logging in...
+              </div>
+            ) : (
+              'Login'
+            )}
           </button>
         </form>
         <p className="mt-4 text-center text-sm">
