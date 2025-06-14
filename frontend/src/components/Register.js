@@ -1,42 +1,45 @@
 import React, { useState } from 'react';
-import { API_BASE } from '../api';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../api';
 
 function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const handleRegister = async e => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+  });
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleChange = e => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async e => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.message || 'Registration failed');
-      } else {
-        alert('Registration successful! Please login.');
-        window.location.href = '/login';
-      }
+      await api.post('/api/auth/register', formData);
+      alert('Registration successful! Please login.');
+      navigate('/login', { replace: true });
     } catch (err) {
-      console.error('Registration error:', err);
-      alert('An error occurred during registration.');
+      setError(err.response?.data?.message || 'An error occurred during registration');
     }
   };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-6 bg-white rounded shadow">
         <h2 className="text-2xl font-bold mb-6 text-center">Register</h2>
-        <form onSubmit={handleRegister}>
+        {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
+        <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block mb-1 font-medium">Name</label>
             <input
               type="text"
+              name="name"
               className="w-full border border-gray-300 px-3 py-2 rounded"
-              value={name}
-              onChange={e => setName(e.target.value)}
+              value={formData.name}
+              onChange={handleChange}
               required
             />
           </div>
@@ -44,9 +47,10 @@ function Register() {
             <label className="block mb-1 font-medium">Email</label>
             <input
               type="email"
+              name="email"
               className="w-full border border-gray-300 px-3 py-2 rounded"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleChange}
               required
             />
           </div>
@@ -54,9 +58,10 @@ function Register() {
             <label className="block mb-1 font-medium">Password</label>
             <input
               type="password"
+              name="password"
               className="w-full border border-gray-300 px-3 py-2 rounded"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleChange}
               required
             />
           </div>
@@ -77,4 +82,5 @@ function Register() {
     </div>
   );
 }
+
 export default Register;

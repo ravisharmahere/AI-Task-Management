@@ -1,8 +1,8 @@
-import * as taskService from '../services/taskService.js';
+import * as TaskService from '../services/task.service';
 
 export const getTasks = async (req, res) => {
   try {
-    const tasks = await taskService.getAllTasks(req.user.id, req.user.role);
+    const tasks = await TaskService.getAllTasks(req.user.id, req.user.role);
     res.json({ tasks });
   } catch (err) {
     console.error('Error in getTasks:', err);
@@ -17,7 +17,7 @@ export const createTask = async (req, res) => {
       return res.status(400).json({ message: 'Title and description are required' });
     }
 
-    const task = await taskService.createTask({ title, description }, req.user.id);
+    const task = await TaskService.createTask({ title, description }, req.user.id);
     res.status(201).json({ message: 'Task created', task });
   } catch (err) {
     console.error('Error in createTask:', err);
@@ -28,7 +28,7 @@ export const createTask = async (req, res) => {
 export const updateTask = async (req, res) => {
   try {
     const { title, description } = req.body;
-    const task = await taskService.updateTask(
+    const task = await TaskService.updateTask(
       req.params.id,
       { title, description },
       req.user.id,
@@ -49,7 +49,7 @@ export const updateTask = async (req, res) => {
 
 export const deleteTask = async (req, res) => {
   try {
-    const result = await taskService.deleteTask(req.params.id, req.user.id, req.user.role);
+    const result = await TaskService.deleteTask(req.params.id, req.user.id, req.user.role);
     res.json(result);
   } catch (err) {
     console.error('Error in deleteTask:', err);

@@ -1,8 +1,8 @@
-import * as aiService from '../services/ai.service.js';
+import * as AIService from '../services/ai.service.js';
 
 export const optimizeTask = async (req, res) => {
   try {
-    const result = await aiService.optimizeTaskDescription(req.body);
+    const result = await AIService.optimizeTaskDescription(req.body);
     res.json(result);
   } catch (err) {
     console.error('Error in optimizeTask:', err);
@@ -15,7 +15,7 @@ export const optimizeTask = async (req, res) => {
 
 export const suggestAssignment = async (req, res) => {
   try {
-    const result = await aiService.suggestTaskAssignment(req.body);
+    const result = await AIService.suggestTaskAssignment(req.body);
     res.json(result);
   } catch (err) {
     console.error('Error in suggestAssignment:', err);

@@ -1,11 +1,11 @@
 import express from 'express';
-import * as aiController from '../controllers/ai.controller.js';
+import * as AIController from '../controllers/ai.controller.js';
 import auth from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 router.use(auth);
 
-router.post('/optimize', aiController.optimizeTask);
-router.post('/assign', aiController.suggestAssignment);
+router.post('/optimize', AIController.optimizeTask);
+router.post('/assign', AIController.suggestAssignment);
 
 export default router;

@@ -1,153 +1,107 @@
 import React, { useEffect, useState } from 'react';
-import { API_BASE } from '../api';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../api';
 
 function Dashboard() {
   const [tasks, setTasks] = useState([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const userName = localStorage.getItem('userName') || 'User';
-  const userRole = localStorage.getItem('userRole') || 'user';
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+  });
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/tasks`, {
-          headers: { Authorization: 'Bearer ' + localStorage.getItem('token') },
-        });
-        if (res.status === 401) {
-          alert('Session expired or unauthorized. Please log in again.');
-          window.location.href = '/login';
-          return;
-        }
-        const data = await res.json();
-        setTasks(data.tasks || []);
-      } catch (err) {
-        console.error('Failed to fetch tasks:', err);
-      }
-    };
     fetchTasks();
   }, []);
-  const handleAddTask = async e => {
-    e.preventDefault();
+
+  const fetchTasks = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + localStorage.getItem('token'),
-        },
-        body: JSON.stringify({ title, description }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.message || 'Failed to add task');
-      } else {
-        setTasks([...tasks, data.task]);
-        setTitle('');
-        setDescription('');
-      }
+      const { data } = await api.get('/api/tasks');
+      setTasks(data.tasks || []);
     } catch (err) {
-      console.error('Error adding task:', err);
-      alert('Error adding task.');
+      setError(err.response?.data?.message || 'Failed to fetch tasks');
     }
   };
+
+  const handleChange = e => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    try {
+      const { data } = await api.post('/api/tasks', formData);
+      setTasks([...tasks, data.task]);
+      setFormData({ title: '', description: '' });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to add task');
+    }
+  };
+
   const handleDeleteTask = async taskId => {
     if (!window.confirm('Are you sure you want to delete this task?')) {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE}/api/tasks/${taskId}`, {
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer ' + localStorage.getItem('token') },
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.message || 'Failed to delete task');
-      } else {
-        setTasks(tasks.filter(task => task._id !== taskId));
-      }
+      await api.delete(`/api/tasks/${taskId}`);
+      setTasks(tasks.filter(task => task._id !== taskId));
     } catch (err) {
-      console.error('Error deleting task:', err);
-      alert('Error deleting task.');
+      setError(err.response?.data?.message || 'Failed to delete task');
     }
   };
+
   const handleOptimize = async task => {
     try {
-      const res = await fetch(`${API_BASE}/api/ai/optimize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + localStorage.getItem('token'),
-        },
-        body: JSON.stringify({ title: task.title, description: task.description }),
+      const { data } = await api.post('/api/ai/optimize', {
+        title: task.title,
+        description: task.description,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.message || 'Failed to optimize task');
-      } else {
-        alert('AI Suggestion (Improved Description):\n\n' + data.optimizedDescription);
-      }
+      alert('AI Suggestion (Improved Description):\n\n' + data.optimizedDescription);
     } catch (err) {
-      console.error('Error optimizing task:', err);
-      alert('Error optimizing task.');
+      setError(err.response?.data?.message || 'Failed to optimize task');
     }
   };
+
   const handleAssign = async task => {
     try {
-      const res = await fetch(`${API_BASE}/api/ai/assign`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + localStorage.getItem('token'),
-        },
-        body: JSON.stringify({ title: task.title, description: task.description }),
+      const { data } = await api.post('/api/ai/assign', {
+        title: task.title,
+        description: task.description,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.message || 'Failed to get assignment suggestion');
-      } else {
-        alert('AI Suggestion (Assignee):\n\n' + data.assignee);
-      }
+      alert('AI Suggestion (Assignee):\n\n' + data.assignee);
     } catch (err) {
-      console.error('Error getting assignment suggestion:', err);
-      alert('Error getting assignment suggestion.');
+      setError(err.response?.data?.message || 'Failed to get assignment suggestion');
     }
   };
+
   const handleEditTask = async task => {
     const newDesc = window.prompt('Edit task description:', task.description);
-    if (newDesc === null) {
-      return;
-    }
+    if (newDesc === null) return;
+
     try {
-      const res = await fetch(`${API_BASE}/api/tasks/${task._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + localStorage.getItem('token'),
-        },
-        body: JSON.stringify({ description: newDesc }),
+      const { data } = await api.put(`/api/tasks/${task._id}`, {
+        description: newDesc,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.message || 'Failed to update task');
-      } else {
-        setTasks(tasks.map(t => (t._id === task._id ? data.task : t)));
-      }
+      setTasks(tasks.map(t => (t._id === task._id ? data.task : t)));
     } catch (err) {
-      console.error('Error updating task:', err);
-      alert('Error updating task.');
+      setError(err.response?.data?.message || 'Failed to update task');
     }
   };
+
   const handleLogout = () => {
     localStorage.clear();
-    window.location.href = '/login';
+    navigate('/login', { replace: true });
   };
+
   return (
     <div className="container mx-auto p-4">
-      {}
+      {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Dashboard</h2>
         <div>
-          <span className="mr-4">Welcome, {userName}!</span>
+          <span className="mr-4">Welcome, {user.name}!</span>
           <button
             onClick={handleLogout}
             className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400"
@@ -156,7 +110,7 @@ function Dashboard() {
           </button>
         </div>
       </div>
-      {}
+
       <div className="mb-6">
         {tasks.length === 0 ? (
           <p>No tasks found. Add a task to get started.</p>
@@ -202,26 +156,28 @@ function Dashboard() {
           </div>
         )}
       </div>
-      {}
+
       <div className="bg-white p-4 rounded shadow">
         <h3 className="font-semibold mb-2">Add New Task</h3>
-        <form onSubmit={handleAddTask}>
+        <form onSubmit={handleSubmit}>
           <div className="mb-2">
             <input
               type="text"
+              name="title"
               placeholder="Task Title"
               className="w-full border border-gray-300 px-2 py-1 rounded"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
+              value={formData.title}
+              onChange={handleChange}
               required
             />
           </div>
           <div className="mb-2">
             <textarea
+              name="description"
               placeholder="Task Description"
               className="w-full border border-gray-300 px-2 py-1 rounded"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
+              value={formData.description}
+              onChange={handleChange}
               required
             />
           </div>
@@ -236,4 +192,5 @@ function Dashboard() {
     </div>
   );
 }
+
 export default Dashboard;
