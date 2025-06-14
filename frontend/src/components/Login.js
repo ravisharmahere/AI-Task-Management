@@ -9,6 +9,7 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+
   const handleLogin = async e => {
     e.preventDefault();
     setIsLoading(true);
@@ -63,7 +64,7 @@ function Login() {
             {isLoading ? (
               <div className="flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Logging in...
+                Loading...
               </div>
             ) : (
               'Login'
