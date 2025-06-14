@@ -1,15 +1,1 @@
-import mongoose from 'mongoose';
-
-const TaskSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    deadline: { type: Date },
-    status: { type: String, enum: ['Pending', 'Ongoing', 'Completed'], default: 'Pending' },
-  },
-  { timestamps: true }
-);
-
-export default mongoose.model('Task', TaskSchema);
+import mongoose from 'mongoose';const TaskSchema = new mongoose.Schema(  {    title: { type: String, required: true },    description: { type: String, required: true },    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },    deadline: { type: Date },    status: { type: String, enum: ['Pending', 'Ongoing', 'Completed'], default: 'Pending' },  },  { timestamps: true });export default mongoose.model('Task', TaskSchema);

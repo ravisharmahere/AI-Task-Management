@@ -1,63 +1,1 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import UserModel from '../database/user.model.js';
-
-export const registerUser = async userData => {
-  const { name, email, password } = userData;
-
-  if (!name || !email || !password) {
-    throw new Error('Please provide name, email, and password');
-  }
-
-  const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
-  if (existingUser) {
-    throw new Error('Email is already registered');
-  }
-
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  const newUser = new UserModel({
-    name,
-    email: email.toLowerCase(),
-    password: hashedPassword,
-  });
-
-  await newUser.save();
-  return { message: 'User registered successfully' };
-};
-
-export const loginUser = async credentials => {
-  const { email, password } = credentials;
-
-  if (!email || !password) {
-    throw new Error('Please provide email and password');
-  }
-
-  const user = await UserModel.findOne({ email: email.toLowerCase() });
-  if (!user) {
-    throw new Error('Invalid credentials');
-  }
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    throw new Error('Invalid credentials');
-  }
-
-  const payload = {
-    id: user._id,
-    role: user.role,
-  };
-
-  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-  return {
-    token,
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
-  };
-};
+import bcrypt from 'bcryptjs';import jwt from 'jsonwebtoken';import UserModel from '../database/user.model.js';export const registerUser = async userData => {  const { name, email, password } = userData;  if (!name || !email || !password) {    throw new Error('Please provide name, email, and password');  }  const existingUser = await UserModel.findOne({ email: email.toLowerCase() });  if (existingUser) {    throw new Error('Email is already registered');  }  const salt = await bcrypt.genSalt(10);  const hashedPassword = await bcrypt.hash(password, salt);  const newUser = new UserModel({    name,    email: email.toLowerCase(),    password: hashedPassword,  });  await newUser.save();  return { message: 'User registered successfully' };};export const loginUser = async credentials => {  const { email, password } = credentials;  if (!email || !password) {    throw new Error('Please provide email and password');  }  const user = await UserModel.findOne({ email: email.toLowerCase() });  if (!user) {    throw new Error('Invalid credentials');  }  const isMatch = await bcrypt.compare(password, user.password);  if (!isMatch) {    throw new Error('Invalid credentials');  }  const payload = {    id: user._id,    role: user.role,  };  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });  return {    token,    user: {      id: user._id,      name: user.name,      email: user.email,      role: user.role,    },  };};
