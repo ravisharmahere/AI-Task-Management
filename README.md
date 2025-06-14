@@ -118,7 +118,14 @@ A modern task management system with AI-powered features for efficient task assi
 - Get task suggestions
 - View daily summaries
 
-## Default Login
+## Default Login Credentials
+
+### Admin Account
 
 - Email: admin@gmail.com
 - Password: admin
+
+### Employee Account
+
+- Email: user@gmail.com
+- Password: user
