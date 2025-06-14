@@ -9,6 +9,7 @@ function Dashboard() {
     description: '',
   });
   const [error, setError] = useState('');
+  const [optimizedContent, setOptimizedContent] = useState({});
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -58,9 +59,41 @@ function Dashboard() {
         title: task.title,
         description: task.description,
       });
-      alert('AI Suggestion (Improved Description):\n\n' + data.optimizedDescription);
+      setOptimizedContent(prev => ({
+        ...prev,
+        [task._id]: {
+          title: data.optimizedTitle,
+          description: data.optimizedDescription,
+        },
+      }));
+      alert(
+        'AI Suggestion:\n\nTitle: ' +
+          data.optimizedTitle +
+          '\n\nDescription: ' +
+          data.optimizedDescription
+      );
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to optimize task');
+    }
+  };
+
+  const handleUseOptimization = async task => {
+    const optimized = optimizedContent[task._id];
+    if (!optimized) return;
+
+    try {
+      const { data } = await api.put(`/api/tasks/${task._id}`, {
+        title: optimized.title,
+        description: optimized.description,
+      });
+      setTasks(tasks.map(t => (t._id === task._id ? data.task : t)));
+      setOptimizedContent(prev => {
+        const newState = { ...prev };
+        delete newState[task._id];
+        return newState;
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to apply optimization');
     }
   };
 
@@ -70,23 +103,66 @@ function Dashboard() {
         title: task.title,
         description: task.description,
       });
-      alert('AI Suggestion (Assignee):\n\n' + data.assignee);
+      alert(
+        'AI Suggestion (Assignee):\n\n' +
+          'Name: ' +
+          data.assignee +
+          '\n' +
+          'Email: ' +
+          data.assigneeEmail +
+          '\n' +
+          'Current Task Load: ' +
+          data.currentTaskLoad +
+          ' tasks\n' +
+          'Workload Complexity: ' +
+          data.complexityScore +
+          '/10\n' +
+          'Overall Workload Score: ' +
+          data.workloadScore.toFixed(1) +
+          '\n' +
+          (data.note ? '\nNote: ' + data.note : '')
+      );
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to get assignment suggestion');
     }
   };
 
-  const handleEditTask = async task => {
-    const newDesc = window.prompt('Edit task description:', task.description);
-    if (newDesc === null) return;
+  const handleSummary = async () => {
+    try {
+      const { data } = await api.post('/api/ai/summary', { tasks });
+      alert('Daily Activity Summary:\n\n' + data.summary);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to generate summary');
+    }
+  };
+
+  const handleEditTitle = async task => {
+    const newTitle = window.prompt('Edit task title:', task.title);
+    if (newTitle === null || !newTitle.trim()) return;
 
     try {
       const { data } = await api.put(`/api/tasks/${task._id}`, {
+        title: newTitle,
+        description: task.description,
+      });
+      setTasks(tasks.map(t => (t._id === task._id ? data.task : t)));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update task title');
+    }
+  };
+
+  const handleEditDescription = async task => {
+    const newDesc = window.prompt('Edit task description:', task.description);
+    if (newDesc === null || !newDesc.trim()) return;
+
+    try {
+      const { data } = await api.put(`/api/tasks/${task._id}`, {
+        title: task.title,
         description: newDesc,
       });
       setTasks(tasks.map(t => (t._id === task._id ? data.task : t)));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update task');
+      setError(err.response?.data?.message || 'Failed to update task description');
     }
   };
 
@@ -101,6 +177,12 @@ function Dashboard() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Dashboard</h2>
         <div>
+          <button
+            onClick={handleSummary}
+            className="mr-4 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Get Summary
+          </button>
           <span className="mr-4">Welcome, {user.name}!</span>
           <button
             onClick={handleLogout}
@@ -118,8 +200,26 @@ function Dashboard() {
           <div>
             {tasks.map(task => (
               <div key={task._id} className="bg-white p-4 rounded shadow mb-3">
-                <h3 className="font-semibold text-lg">{task.title}</h3>
-                <p className="mb-2">{task.description}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-lg">{task.title}</h3>
+                  <button
+                    onClick={() => handleEditTitle(task)}
+                    className="text-gray-500 hover:text-blue-600"
+                    title="Edit title"
+                  >
+                    ✏️
+                  </button>
+                </div>
+                <div className="flex items-start gap-2 mb-2">
+                  <p className="flex-grow">{task.description}</p>
+                  <button
+                    onClick={() => handleEditDescription(task)}
+                    className="text-gray-500 hover:text-blue-600"
+                    title="Edit description"
+                  >
+                    ✏️
+                  </button>
+                </div>
                 <p className="text-sm text-gray-600 mb-2">
                   Created by: {task.createdBy ? task.createdBy.name : 'Unknown'}
                   {task.createdBy && task.createdBy.email ? ' (' + task.createdBy.email + ')' : ''}
@@ -132,17 +232,19 @@ function Dashboard() {
                   >
                     Optimize
                   </button>
+                  {optimizedContent[task._id] && (
+                    <button
+                      onClick={() => handleUseOptimization(task)}
+                      className="px-3 py-1 bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600"
+                    >
+                      Use Optimization
+                    </button>
+                  )}
                   <button
                     onClick={() => handleAssign(task)}
                     className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                   >
                     Assign
-                  </button>
-                  <button
-                    onClick={() => handleEditTask(task)}
-                    className="px-3 py-1 bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600"
-                  >
-                    Edit
                   </button>
                   <button
                     onClick={() => handleDeleteTask(task._id)}

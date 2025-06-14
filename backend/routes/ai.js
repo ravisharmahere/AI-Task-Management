@@ -7,5 +7,6 @@ router.use(auth);
 
 router.post('/optimize', AIController.optimizeTask);
 router.post('/assign', AIController.suggestAssignment);
+router.post('/summary', AIController.generateSummary);
 
 export default router;

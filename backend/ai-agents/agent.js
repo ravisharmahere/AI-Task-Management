@@ -1,4 +1,6 @@
 import { Configuration, OpenAIApi } from 'openai';
+import TaskModel from '../database/task.model.js';
+import UserModel from '../database/user.model.js';
 
 const getOpenAI = () => {
   const configuration = new Configuration({
@@ -9,8 +11,59 @@ const getOpenAI = () => {
 
 export const TaskAssigner = async (title, description) => {
   const openai = getOpenAI();
-  const rolesList = ['Developer', 'Designer', 'Project Manager', 'QA Tester'];
-  const prompt = `We have a team with the following roles: ${rolesList.join(', ')}. Given the following task, determine which role is best suited to take it on.\n\nTask Title: ${title || 'Untitled'}\nTask Description: ${description}\n\nThe single most suitable role for this task is:`;
+
+  // Get all employees and their tasks
+  const employees = await UserModel.find({ role: 'employee' });
+  const employeeWorkloads = await Promise.all(
+    employees.map(async employee => {
+      const tasks = await TaskModel.find({
+        assignedTo: employee._id,
+        status: { $ne: 'Completed' },
+      }).select('title description');
+
+      return {
+        id: employee._id,
+        name: employee.name,
+        email: employee.email,
+        tasks,
+        taskCount: tasks.length,
+      };
+    })
+  );
+
+  // Analyze workload complexity for each employee
+  const workloadAnalysis = await Promise.all(
+    employeeWorkloads.map(async employee => {
+      const workloadPrompt = `Analyze the complexity of this employee's current workload. Consider both the number of tasks and their descriptions.\n\nEmployee: ${employee.name}\nNumber of tasks: ${employee.taskCount}\n\nCurrent Tasks:\n${employee.tasks.map((task, index) => `${index + 1}. ${task.title}\n   ${task.description}`).join('\n')}\n\nRate the workload complexity from 1-10 (1 being light, 10 being heavy):`;
+
+      const workloadResponse = await openai.createChatCompletion({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'user',
+            content: workloadPrompt,
+          },
+        ],
+        max_tokens: 10,
+        temperature: 0.3,
+      });
+
+      const complexityScore =
+        parseInt(workloadResponse.data.choices[0].message.content.trim()) || 5;
+
+      return {
+        ...employee,
+        complexityScore,
+        workloadScore: (employee.taskCount * complexityScore) / 10, // Normalized score considering both count and complexity
+      };
+    })
+  );
+
+  // Sort employees by workload score
+  const sortedEmployees = workloadAnalysis.sort((a, b) => a.workloadScore - b.workloadScore);
+  const leastLoadedEmployee = sortedEmployees[0];
+
+  const prompt = `Given the following task, determine if it's suitable for the employee with the lowest current workload.\n\nTask Title: ${title || 'Untitled'}\nTask Description: ${description}\n\nEmployee Details:\nName: ${leastLoadedEmployee.name}\nEmail: ${leastLoadedEmployee.email}\nCurrent Tasks: ${leastLoadedEmployee.taskCount}\nWorkload Complexity Score: ${leastLoadedEmployee.complexityScore}/10\n\nCurrent Tasks:\n${leastLoadedEmployee.tasks.map((task, index) => `${index + 1}. ${task.title}\n   ${task.description}`).join('\n')}\n\nIs this employee suitable for this task? Consider their current workload complexity and the nature of their existing tasks. Answer with just 'Yes' or 'No':`;
 
   const apiResponse = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo',
@@ -20,17 +73,68 @@ export const TaskAssigner = async (title, description) => {
         content: prompt,
       },
     ],
-    max_tokens: 50,
-    temperature: 0.7,
+    max_tokens: 10,
+    temperature: 0.3,
   });
 
-  return apiResponse.data.choices[0].message.content.trim();
+  const isSuitable = apiResponse.data.choices[0].message.content.trim().toLowerCase() === 'yes';
+
+  if (isSuitable) {
+    return {
+      assigneeId: leastLoadedEmployee.id,
+      assigneeName: leastLoadedEmployee.name,
+      assigneeEmail: leastLoadedEmployee.email,
+      currentTaskLoad: leastLoadedEmployee.taskCount,
+      complexityScore: leastLoadedEmployee.complexityScore,
+      workloadScore: leastLoadedEmployee.workloadScore,
+    };
+  } else {
+    // If the least loaded employee is not suitable, find the next least loaded suitable employee
+    for (let i = 1; i < sortedEmployees.length; i++) {
+      const employee = sortedEmployees[i];
+      const followUpPrompt = `Given the same task, is this employee suitable?\n\nEmployee Details:\nName: ${employee.name}\nEmail: ${employee.email}\nCurrent Tasks: ${employee.taskCount}\nWorkload Complexity Score: ${employee.complexityScore}/10\n\nCurrent Tasks:\n${employee.tasks.map((task, index) => `${index + 1}. ${task.title}\n   ${task.description}`).join('\n')}\n\nIs this employee suitable for this task? Consider their current workload complexity and the nature of their existing tasks. Answer with just 'Yes' or 'No':`;
+
+      const followUpResponse = await openai.createChatCompletion({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'user',
+            content: followUpPrompt,
+          },
+        ],
+        max_tokens: 10,
+        temperature: 0.3,
+      });
+
+      if (followUpResponse.data.choices[0].message.content.trim().toLowerCase() === 'yes') {
+        return {
+          assigneeId: employee.id,
+          assigneeName: employee.name,
+          assigneeEmail: employee.email,
+          currentTaskLoad: employee.taskCount,
+          complexityScore: employee.complexityScore,
+          workloadScore: employee.workloadScore,
+        };
+      }
+    }
+
+    // If no suitable employee found, return the least loaded employee anyway
+    return {
+      assigneeId: leastLoadedEmployee.id,
+      assigneeName: leastLoadedEmployee.name,
+      assigneeEmail: leastLoadedEmployee.email,
+      currentTaskLoad: leastLoadedEmployee.taskCount,
+      complexityScore: leastLoadedEmployee.complexityScore,
+      workloadScore: leastLoadedEmployee.workloadScore,
+      note: 'No perfectly suitable employee found. Assigned to employee with lowest workload score.',
+    };
+  }
 };
 
 export const TaskOptimizer = async (title, description) => {
   const openai = getOpenAI();
 
-  const prompt = `Here is a task and its description. Improve the clarity and detail of the description.\n\nTask Title: ${title || 'Untitled'}\nTask Description: ${description}\n\nImproved Task Description:`;
+  const prompt = `Here is a task and its description. Improve both the title and description to be more clear and detailed.\n\nCurrent Title: ${title || 'Untitled'}\nCurrent Description: ${description}\n\nProvide the response in this exact format:\nTitle: [improved title]\nDescription: [improved description]`;
 
   const apiResponse = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo',
@@ -40,7 +144,32 @@ export const TaskOptimizer = async (title, description) => {
         content: prompt,
       },
     ],
-    max_tokens: 100,
+    max_tokens: 200,
+    temperature: 0.7,
+  });
+
+  const response = apiResponse.data.choices[0].message.content.trim();
+  const [titleLine, descLine] = response.split('\n');
+  const optimizedTitle = titleLine.replace('Title:', '').trim();
+  const optimizedDescription = descLine.replace('Description:', '').trim();
+
+  return { optimizedTitle, optimizedDescription };
+};
+
+export const SummaryAgent = async tasks => {
+  const openai = getOpenAI();
+
+  const prompt = `Given the following tasks, provide a concise summary of today's activity. Include completed tasks, pending tasks, and upcoming deadlines.\n\nTasks:\n${JSON.stringify(tasks, null, 2)}\n\nSummary:`;
+
+  const apiResponse = await openai.createChatCompletion({
+    model: 'gpt-3.5-turbo',
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+    max_tokens: 200,
     temperature: 0.7,
   });
 

@@ -25,3 +25,16 @@ export const suggestAssignment = async (req, res) => {
     res.status(500).json({ message: 'Failed to get assignment suggestion' });
   }
 };
+
+export const generateSummary = async (req, res) => {
+  try {
+    const result = await AIService.generateTaskSummary(req.body.tasks);
+    res.json(result);
+  } catch (err) {
+    console.error('Error in generateSummary:', err);
+    if (err.message.includes('required')) {
+      return res.status(400).json({ message: err.message });
+    }
+    res.status(500).json({ message: 'Failed to generate task summary' });
+  }
+};

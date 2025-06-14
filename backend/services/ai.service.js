@@ -1,4 +1,4 @@
-import { TaskAssigner, TaskOptimizer } from '../ai-agents/agent.js';
+import { SummaryAgent, TaskAssigner, TaskOptimizer } from '../ai-agents/agent.js';
 
 export const optimizeTaskDescription = async taskData => {
   const { title, description } = taskData;
@@ -7,8 +7,8 @@ export const optimizeTaskDescription = async taskData => {
     throw new Error('Task description is required for optimization');
   }
 
-  const optimizedText = await TaskOptimizer(title, description);
-  return { optimizedDescription: optimizedText };
+  const { optimizedTitle, optimizedDescription } = await TaskOptimizer(title, description);
+  return { optimizedTitle, optimizedDescription };
 };
 
 export const suggestTaskAssignment = async taskData => {
@@ -18,6 +18,23 @@ export const suggestTaskAssignment = async taskData => {
     throw new Error('Task description is required for assignment suggestion');
   }
 
-  const suggestion = await TaskAssigner(title, description);
-  return { assignee: suggestion };
+  const assignment = await TaskAssigner(title, description);
+  return {
+    assignee: assignment.assigneeName,
+    assigneeId: assignment.assigneeId,
+    assigneeEmail: assignment.assigneeEmail,
+    currentTaskLoad: assignment.currentTaskLoad,
+    complexityScore: assignment.complexityScore,
+    workloadScore: assignment.workloadScore,
+    note: assignment.note,
+  };
+};
+
+export const generateTaskSummary = async tasks => {
+  if (!tasks || !Array.isArray(tasks)) {
+    throw new Error('Tasks array is required for summary generation');
+  }
+
+  const summary = await SummaryAgent(tasks);
+  return { summary };
 };
