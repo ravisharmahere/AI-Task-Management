@@ -6,7 +6,7 @@ import Register from './components/Register';
 import './index.css';
 
 function App() {
-  const [setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -33,7 +33,7 @@ function App() {
   };
 
   return (
-    <Router basename={process.env.PUBLIC_URL}>
+    <Router>
       <Routes>
         <Route
           path="/login"
