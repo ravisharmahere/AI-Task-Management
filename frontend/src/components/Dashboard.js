@@ -283,7 +283,6 @@ function Dashboard() {
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login', { replace: true });
-    window.location.reload();
   };
   const formatDate = dateString => {
     if (!dateString) return 'Not set';
