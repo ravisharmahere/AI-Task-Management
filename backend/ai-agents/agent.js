@@ -25,11 +25,11 @@ export const TaskAssigner = async (title, description) => {
   });
 
   return apiResponse.data.choices[0].message.content.trim();
-}
+};
 
 export const TaskOptimizer = async (title, description) => {
   const openai = getOpenAI();
-    
+
   const prompt = `Here is a task and its description. Improve the clarity and detail of the description.\n\nTask Title: ${title || 'Untitled'}\nTask Description: ${description}\n\nImproved Task Description:`;
 
   const apiResponse = await openai.createChatCompletion({
@@ -43,6 +43,6 @@ export const TaskOptimizer = async (title, description) => {
     max_tokens: 100,
     temperature: 0.7,
   });
-  
+
   return apiResponse.data.choices[0].message.content.trim();
-}
+};

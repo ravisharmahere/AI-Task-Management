@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { API_BASE } from '../api'
+import { API_BASE } from '../api';
 
 function Register() {
   const [name, setName] = useState('');

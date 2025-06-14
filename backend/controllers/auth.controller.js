@@ -1,0 +1,27 @@
+import * as authService from '../services/auth.service.js';
+
+export const register = async (req, res) => {
+  try {
+    const result = await authService.registerUser(req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    console.error('Error in register:', err);
+    if (err.message === 'Email is already registered') {
+      return res.status(400).json({ message: err.message });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const login = async (req, res) => {
+  try {
+    const result = await authService.loginUser(req.body);
+    res.json(result);
+  } catch (err) {
+    console.error('Error in login:', err);
+    if (err.message === 'Invalid credentials') {
+      return res.status(400).json({ message: err.message });
+    }
+    res.status(500).json({ message: 'Server error' });
+  }
+};
